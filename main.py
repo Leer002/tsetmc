@@ -71,63 +71,6 @@ def create_folder(excel_file = "لیست_شرکت_ها.xlsx"):
     print(f"تعداد شرکت‌های استخراج‌شده: {len(companies)}")
     return companies
 
-# def get_webpage(companies): 
-#     driver.get(url) 
-#     search_icon = WebDriverWait(driver, 10).until( EC.presence_of_element_located((By.CSS_SELECTOR, "a#search")) ) 
-    
-#     search_icon.click() 
-#     search = WebDriverWait(driver, 10).until( EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='search']")) ) 
-#     for company in companies[:4]: 
-#         try: 
-#             search.click() 
-#             search.clear() 
-#             search.send_keys(company["name"], Keys.ENTER)
-
-#             WebDriverWait(driver, 10).until( EC.text_to_be_present_in_element( (By.CSS_SELECTOR, "div.box1.grey.tbl.z2_4"), company["name"] ) ) 
-
-#             rows = WebDriverWait(driver, 10).until( EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.box1.grey.tbl.z2_4 div[role='row'] a"))) 
-
-#             for row in rows: 
-#                 link = row.get_attribute("href") 
-#                 normalized_text = normalize_farsi(row.text) 
-#                 before_dash = normalized_text.split('-')[0].strip() 
-#                 print(company["name"], before_dash)
-                    
-#                 # if link and normalize_farsi(company["name"]).strip() == before_dash \
-#                 # and not row.find_elements(By.XPATH, ".//span[contains(text(),'حذف')]"):
-                
-#                 #     # ذخیره شناسه پنجره اصلی
-#                 #     original_window = driver.current_window_handle
-                    
-#                 #     # کلیک روی لینک (که پنجره جدید باز می‌کند)
-#                 #     row.click()
-                    
-#                 #     # انتظار برای اینکه تعداد پنجره‌ها به 2 برسد
-#                 #     WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(2))
-                    
-#                 #     # سوئیچ به پنجره جدید
-#                 #     new_window = [window for window in driver.window_handles if window != original_window][0]
-#                 #     driver.switch_to.window(new_window)
-                    
-#                 #     # انجام پردازش مورد نظر (برای مثال، استخراج اطلاعات)
-#                 #     # ...
-                    
-#                 #     # بستن پنجره جدید
-#                 #     driver.close()
-                    
-#                 #     # انتظار تا فقط یک پنجره باقی بماند
-#                 #     WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(1))
-                    
-#                 #     # سوئیچ مجدد به پنجره اصلی
-#                 #     driver.switch_to.window(original_window)
-                    
-#                 #     # (در صورت لزوم، ادامه کار برای شرکت فعلی یا پایان حلقه)
-#                 #     break
-        
-#         except StaleElementReferenceException as e:
-#             print(e)
-
-
 def get_webpage(companies): 
     driver.get(url) 
     search_icon = WebDriverWait(driver, 10).until(
