@@ -1,62 +1,73 @@
-import os
-import re
-import time
-import datetime
-import jdatetime
-import pandas as pd
-import win32com.client as win32
-import unicodedata
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import StaleElementReferenceException
-from selenium.common.exceptions import TimeoutException
-from webdriver_manager.chrome import ChromeDriverManager
+import os # ساخت پوشه
+import re # کار با Regex
+import time # برای استفاده از زمان‌سنجی یا مکث
+import datetime # کار با تاریخ 
+import jdatetime # برای تبدیل تاریخ ها
+import pandas as pd # خواندن و پردازش داده‌های جدولی 
+import win32com.client as win32  # کار با برنامه‌ های ویندوز مثل اکسل 
+import unicodedata # برای نرمال‌سازی و پاک‌سازی کاراکترهای یونیکد مثل فارسی
+from selenium import webdriver # اجرای خودکار تعاملات با صفحات وب
+from selenium.webdriver.chrome.service import Service # راه‌اندازی مرورگر Chrome با استفاده از
+from selenium.webdriver.common.by import By  # یافتن عناصر صفحه
+from selenium.webdriver.support.ui import WebDriverWait # اعمال زمان انتظار برای بارگذاری عناصر
+from selenium.webdriver.support import expected_conditions as EC # برای بررسی وضعیت عناصر صفحه
+from webdriver_manager.chrome import ChromeDriverManager # مدیریت درایور مرورگر 
+from selenium.webdriver.common.keys import Keys # شبیه‌سازی فشار دادن کلیدهای صفحه‌کلید
+from selenium.common.exceptions import StaleElementReferenceException  # مدیریت خطایی که وقتی عنصر صفحه دیگه معتبر نیست پیش میاد
+from selenium.common.exceptions import TimeoutException # مدیریت خطایی که وقتی یک عملیات به‌موقع انجام نشه اتفاق می‌ افته
 
-url = "https://tsetmc.ir/"
+url = "https://tsetmc.com/"
 
+# تنظیمات مرورگر
 chrome_options = webdriver.ChromeOptions()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("--log-level=3")
+chrome_options.add_argument("--headless")  # اجرای مرورگر بدون نمایش دادن 
+chrome_options.add_argument("--disable-gpu")  # غیرفعال کردن پردازش گرافیکی (برای جلوگیری از برخی خطاها)
+chrome_options.add_argument("--log-level=3")  # جلوگیری از نمایش پیام‌ های کم‌اهمیت‌ تر
 
-driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="137.0.7151.104").install()), options=chrome_options)
+# ساخت شیء درایور برای کنترل مرورگر
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
 now = jdatetime.date.fromgregorian(date=datetime.date.today())
 now_str = now.strftime(f"%Y-%m-%d")
 
-def clean_name(s):
-    if not s:
+def normalize_and_clean_filename(text):
+    """ نرمال‌ سازی یونیکد, حذف نیم‌ فاصله‌ ها
+        جایگزینی کاراکترهای غیرمجاز در نام فایل با "_"
+    """
+    if not text:
         return ""
-    s = str(s).replace("\u200c", "").strip()
-    return re.sub(r'[\\/*?:"<>|]', "_", s)
 
-def normalize_farsi(text):
-    return unicodedata.normalize('NFC', text).replace("\u200c", "").replace("ی", "ي").replace("ک", "ك").strip()
+    # نرمال‌ سازی یونیکد و حذف نیم‌ فاصله‌ ها
+    text = unicodedata.normalize('NFC', text)
+    text = text.replace("\u200c", "").replace("ی", "ي").replace("ک", "ك").strip()
+
+    # جایگزینی کاراکترهای غیرمجاز در نام فایل با "_"
+    return re.sub(r'[\\/*?:"<>|]', "_", text)
 
 def create_folder(excel_file = "لیست_شرکت_ها.xlsx"):
-    companies = []
-    industries = set()
-
+    """ساخت پوشه‌ بر اساس لیست شرکت‌ها و صنایع از فایل اکسل"""
+    companies = []         # لیست شرکت‌ها
+    industries = set()     # مجموعه‌ای از صنایع 
+    
+    # باز کردن اکسل به صورت مخفی
     excel = win32.Dispatch("Excel.Application")
     excel.Visible = False
     wb = excel.Workbooks.Open(os.path.abspath(excel_file))
-    sheet = wb.Sheets(1)
-    row_count = sheet.UsedRange.Rows.Count
+    sheet = wb.Sheets(1) # انتخاب شیت اول
+    row_count = sheet.UsedRange.Rows.Count # شمارش ردیف‌های استفاده‌شده
 
-    for r in range(2, row_count + 1):
-        name = sheet.Cells(r, 2).Value
-        ind  = sheet.Cells(r, 6).Value
+    # استخراج صنایع از فایل اکسل و ساخت پوشه برای هر صنعت
+    for r in range(2, row_count + 1): # از ردیف دوم شروع می‌کنیم (چون ردیف اول عنوان‌ است)
+        name = sheet.Cells(r, 2).Value # ستون دوم: نماد
+        ind  = sheet.Cells(r, 6).Value # ستون ششم: صنعت
         if name and ind and name != "مقدار یافت نشد":
-            industries.add(clean_name(ind))
-
+            industries.add(normalize_and_clean_filename(ind))
+    
+    # ساخت پوشه برای هر صنعت
     for ind in industries:
         os.makedirs(ind, exist_ok=True)
 
-  
+    # ساخت لیست شرکت‌ها + صنعت
     for r in range(2, row_count + 1):
         name = sheet.Cells(r, 2).Value
         ind  = sheet.Cells(r, 6).Value
@@ -65,109 +76,119 @@ def create_folder(excel_file = "لیست_شرکت_ها.xlsx"):
                 "name": name,
                 "industry": ind
             })
-
+    # بستن فایل و خارج شدن از اکسل
     wb.Close(False)
     excel.Quit()
+
     print(f"تعداد شرکت‌های استخراج‌شده: {len(companies)}")
     return companies
 
 def get_webpage(companies): 
+    # باز کردن صفحه اصلی (TSETMC)
     driver.get(url) 
+
+    # صبر تا زمانی که آیکون جست‌وجو در صفحه لود شود
     search_icon = WebDriverWait(driver, 60).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, "a#search"))
     ) 
+    # کلیک روی آیکون جست‌وجو
     search_icon.click() 
 
     for company in companies: 
         try: 
+            # منتظر می‌ ماند تا فیلد ورودی جست‌وجو در دسترس باشد
             search = WebDriverWait(driver, 60).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='search']"))
             )
+
+            # کلیک روی فیلد ورودی و پاک کردن محتوای قبلی
             search.click() 
             search.clear() 
-            time.sleep(5) 
-
+            time.sleep(3) 
+            
+            # جست‌وجو کردن نماد
             search.send_keys(company["name"], Keys.ENTER)
-            time.sleep(5)
-
+            
+            # منتظر می‌ ماند تا نماد در بخشی از صفحه ظاهر شود
             WebDriverWait(driver, 60).until(
-                EC.text_to_be_present_in_element(
-                    (By.CSS_SELECTOR, "div.box1.grey.tbl.z2_4"), company["name"]
-                )
-            ) 
+                EC.text_to_be_present_in_element((By.CSS_SELECTOR, "div.box1.grey.tbl.z2_4"), company["name"])) 
             
             attempts = 3
             while attempts > 0:
                 try:
+                    # صبر می‌کنه تا تمام ردیف‌های شرکت‌هایی که منقضی نشده‌اند در جدول بارگذاری شوند
                     rows = WebDriverWait(driver, 60).until(
-                        EC.presence_of_all_elements_located(
-                            (By.CSS_SELECTOR, "div.box1.grey.tbl.z2_4 div[role='row'] a:not(.expiredInstrument)")
-                        )
-                    )
+                        EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.box1.grey.tbl.z2_4 div[role='row'] a:not(.expiredInstrument)")))
                     
                     for row in rows:
-                        link = row.get_attribute("href")
-                        normalized_text = normalize_farsi(row.text)
-                        before_dash = normalized_text.split('-')[0].strip()
-
-                        if link and normalize_farsi(company["name"]).strip() == before_dash:
-                            original_window = driver.current_window_handle
+                        link = row.get_attribute("href") # گرفتن لینک مربوط به هر ردیف
+                        normalized_text = normalize_and_clean_filename(row.text) # نرمال‌ سازی و پاک‌ سازی نام نمایش‌ داده‌ شده در ردیف
+                        before_dash = normalized_text.split('-')[0].strip() # گرفتن بخش قبل از "-"
+                        
+                        # بررسی تطبیق نماد نوشته شده در اکسل و در سایت
+                        if link and normalize_and_clean_filename(company["name"]).strip() == before_dash:
+                            original_window = driver.current_window_handle # ذخیره تب فعلی مرورگر که در آن جست و جو انجام می شود
                             row.click()
 
                             is_new_tab = False
                             try:
+                                # بررسی می‌کنه آیا تب جدید باز شده وقتی روی لینک مربوط به یک نماد کلیک کردیم
                                 WebDriverWait(driver, 5).until(EC.number_of_windows_to_be(2))
+                                # یک لیست ساخته می‌شه از تمام تب‌هایی که با تب اصلی فرق دارن 
                                 new_window = [w for w in driver.window_handles if w != original_window][0]
-                                driver.switch_to.window(new_window)
+                                driver.switch_to.window(new_window) # رفتن به تب جدید
                                 is_new_tab = True
+
                             except TimeoutException:
+                                # اگر تب جدید باز نشد همان تب فعلی باقی می‌ ماند
                                 pass
+
                             try:
-                                tables = WebDriverWait(driver, 60).until(
-                                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table"))
-                                )
+                                # صبر برای پیدا کردن تمام جدول‌ ها در صفحه
+                                tables = WebDriverWait(driver, 60).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table")))
                             except TimeoutException:
-                                print("عنصر tables یافت نشد، لیست خالی ایجاد می‌شود.")
+                                print("جدولی یافت نشد")
                                 tables = []
 
                             try:
+                                # پیدا کردن اطلاعات مربوط به بخش مقایسه ی شرکت ها
                                 xpath_0 = "//*[@id='Section_relco']/div[2]//div[@role='gridcell']"
-                                elements_0 = WebDriverWait(driver, 60).until(
-                                    EC.presence_of_all_elements_located((By.XPATH, xpath_0))
-                                )
+                                elements_0 = WebDriverWait(driver, 60).until(EC.presence_of_all_elements_located((By.XPATH, xpath_0)))
+                                
                             except TimeoutException:
-                                print("عنصر elements_0 یافت نشد، لیست خالی ایجاد می‌شود.")
+                                print("بخش مقایسه ی شرکت ها یافت نشد")
                                 elements_0 = []
 
                             try:
+                                # پیدا کردن اطلاعات مربوط به بخش اطلاعیه
                                 xpath = '//*[@id="Section_codal"]/div[2]//div[@role="gridcell"] | //*[@id="Section_codal"]/div[2]//span[@class="ag-header-cell-text"]'
-                                elements = WebDriverWait(driver, 60).until(
-                                    EC.presence_of_all_elements_located((By.XPATH, xpath))
-                                )
+                                elements = WebDriverWait(driver, 60).until(EC.presence_of_all_elements_located((By.XPATH, xpath)))
+                                
                             except TimeoutException:
-                                print("عنصر elements یافت نشد، لیست خالی ایجاد می‌شود.")
+                                print("بخش اطلاعیه یافت نشد")
                                 elements = []
 
                             try:
+                                #  پیدا کردن اطلاعات مربوط به بخش سابقه معاملات
                                 xpath_2 = "//*[@id='Section_history']/div[2]/div/div/div/div[1]/div[2]/div[3]/div[2]//div[@role='gridcell']"
-                                elements_2 = WebDriverWait(driver, 60).until(
-                                    EC.presence_of_all_elements_located((By.XPATH, xpath_2))
-                                )
+                                elements_2 = WebDriverWait(driver, 60).until(EC.presence_of_all_elements_located((By.XPATH, xpath_2)))
+
                             except TimeoutException:
-                                print("عنصر elements_2 یافت نشد، لیست خالی ایجاد می‌شود.")
+                                print("بخش سابقه معاملات یافت نشد")
                                 elements_2 = []
 
                             try:
-                                elements_2_date = WebDriverWait(driver, 60).until(
-                                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.ag-pinned-right-cols-container a"))
-                                )
+                                # پیدا کردن ستون مربوط به تاریخ بخش سابقه معاملات
+                                elements_2_date = WebDriverWait(driver, 60).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.ag-pinned-right-cols-container a")))
+                                
                             except TimeoutException:
-                                print("عنصر elements_2_date یافت نشد، لیست خالی ایجاد می‌شود.")
+                                print("ستون مربوط به تاریخ بخش سابقه معاملات یافت نشد")
                                 elements_2_date = []
 
-                            dfs = []
-                            tds = driver.find_elements(By.TAG_NAME, "td")
+                            dfs = [] # لیستی برای دیتا‌فریم‌ های استخراج‌ شده
 
+                            tds = driver.find_elements(By.TAG_NAME, "td")
+                            # پیدا کردن مقدار قیمت پایانی به صورت جدا چون تگ tr برای آن وجود ندارد
                             extra_row = []
                             for i in range(len(tds) - 1):
                                 label = tds[i].text.strip()
@@ -176,7 +197,10 @@ def get_webpage(companies):
                                 if label == "قیمت پایانی":
                                     extra_row = [label, value]
                                     break 
+
+                            # علامتی برای اطمینان از اینکه فقط یک بار مقدار قیمت پایانی به لیست اضافه شه
                             extra_added = False
+                            # گرفتن اطلاعات داخل جدول ها
                             for table in tables:
                                 rows = []
                                 for row in table.find_elements(By.CSS_SELECTOR, "tr"):
@@ -186,25 +210,22 @@ def get_webpage(companies):
                                     if cells:
                                         if extra_row:
                                             rows.append(cells)
-                                            if extra_row and not extra_added:
+                                            if not extra_added: # اگر ردیف extra قبلاً اضافه نشده بود،  اضافه‌اش کن
                                                 rows.append(extra_row)
                                                 extra_added = True
                                         else:
                                             rows.append(cells)
 
-                                df = pd.DataFrame(rows)
+                                df = pd.DataFrame(rows) # تبدیل جدول به DataFrame
                                 dfs.append(df)
                             
+                            # لیست کردن داده های بخش مقایسه ی شرکت ها
                             texts_0 = [
                                 element.text.strip()
                                 for element in elements_0
-                                if element.text.strip() or any(c.isalnum() for c in element.text)
+                                if element.text.strip() or any(c.isalnum() for c in element.text) # حداقل یک کاراکتر الفبایی یا عددی در متن وجود دارد یا بعد از حذف فاصله خالی نباشد
                             ]
-                            texts = [element.text for element in elements]
-
-                            texts_2 = [element.text for element in elements_2]
-                            texts_2_date = [element.text for element in elements_2_date]
-
+                            # هر 8 آیتم بشه یک سطر
                             data_0 = []
                             for i in range(0, len(texts_0), 8):
                                 group = texts_0[i:i+8]
@@ -213,7 +234,10 @@ def get_webpage(companies):
 
                             df_elements_0 = pd.DataFrame(data_0, columns=
                                                         ["نماد", "پایانی", " ", "آخرین", " ", "تعداد", "حجم", "ارزش"])
-
+                            
+                            # لیست کردن داده های بخش اطلاعیه
+                            texts = [element.text for element in elements]
+                            # هر 2 آیتم بشه یک سطر
                             data = []
                             for i in range(2, len(texts), 2):
                                 first = texts[i]
@@ -223,34 +247,41 @@ def get_webpage(companies):
 
                             df_elements = pd.DataFrame(data, columns=["تاریخ", "عنوان"])
 
+                            # لیست کردن داده های بخش سابقه معاملات
+                            texts_2 = [element.text for element in elements_2]
+                            # لیست کردن تاریخ های مربوط به سابقه معاملات
+                            texts_2_date = [element.text for element in elements_2_date]
+                            
+                            # هر 7 آیتم بشه یک سطر
                             data_2 = []
                             j = 0
                             for i in range(0, len(texts_2), 7):
                                 items = texts_2[i:i + 7]
                                 if len(items) < 7:
                                     items += [""] * (7 - len(items))
-                                
                                 date = texts_2_date[j] if j < len(texts_2_date) else ""
                                 j += 1
                                 
                                 group_2 = [date] + items
                                 data_2.append(group_2)
 
-
                             df_elements_2 = pd.DataFrame(data_2, columns=["تاریخ", "پایانی", "تغییر%", "کمترین", "بیشترین", "تعداد", "حجم", "ارزش"])
 
-                            industry = clean_name(company["industry"])
-                            name = clean_name(company["name"])
-
+                            industry = normalize_and_clean_filename(company["industry"])
+                            name = normalize_and_clean_filename(company["name"])
+                            
+                            # مسیر فایل اکسل خروجی
                             file_path = os.path.join(industry, f"{name}_{now_str}.xlsx")
                             os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
+                            # ذخیره‌سازی همه دیتا‌فریم‌ها در فایل اکسل در یک شیت 
                             with pd.ExcelWriter(file_path) as writer:
                                 start_row = 0 
-                                for idx, df in enumerate(dfs, start=1):
+
+                                for df in dfs:
                                     df.to_excel(writer, sheet_name="AllData", startrow=start_row, index=False, header=False)
 
-                                    start_row += len(df) + 2
+                                    start_row += len(df) + 2 # فاصله بین جدول‌ ها
 
                                 df_elements_0.to_excel(writer, sheet_name="AllData", startrow=start_row, index=False)
 
@@ -263,22 +294,22 @@ def get_webpage(companies):
                                 df_elements_2.to_excel(writer, sheet_name="AllData", startrow=start_row, index=False)
                                 print(f"{company['name']}")
 
-                            if is_new_tab:
+                            if is_new_tab: # اگر تب جدید باز شده بود آن را ببند و برگرد به تب اصلی
                                 driver.close()
                                 driver.switch_to.window(original_window)
                             else:
                                 driver.back()
                     break    
                         
-                except StaleElementReferenceException:
+                except StaleElementReferenceException: # ر عنصر صفحه معتبر نبود دوباره امتحان کند
                     attempts -= 1
                     time.sleep(1)  
 
             if attempts == 0:
-                print(f"Failed to retrieve rows for {company['name']} due to stale elements.")
+                print(f"بازیابی ردیف‌ های {company['name']} ناموفق بود")
 
         except Exception as e:    
-            print(f"Error searching for {company['name']}: {e}")
+            print(f"خطا در جستجو {company['name']}: {e}")
 
 companies = create_folder()
 get_webpage(companies)
