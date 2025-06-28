@@ -1,0 +1,8 @@
+jdatetime==5.2.0
+numpy==2.3.1
+pandas==2.3.0
+pywin32==310
+requests==2.32.4
+selenium==4.33.0
+webdriver-manager==4.0.2
+

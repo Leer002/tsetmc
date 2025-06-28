@@ -16,10 +16,10 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 
-url = "https://tsetmc.com/"
+url = "https://tsetmc.ir/"
 
 chrome_options = webdriver.ChromeOptions()
-# chrome_options.add_argument("--headless")
+chrome_options.add_argument("--headless")
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--log-level=3")
 
@@ -261,7 +261,7 @@ def get_webpage(companies):
                                 start_row += len(df_elements) + 2
 
                                 df_elements_2.to_excel(writer, sheet_name="AllData", startrow=start_row, index=False)
-                                print("ja")
+                                print(f"{company['name']}")
 
                             if is_new_tab:
                                 driver.close()
