@@ -16,7 +16,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 
-url = "https://tsetmc.ir/"
+url = "https://tsetmc.com/"
 
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("--headless")
