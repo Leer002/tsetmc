@@ -78,7 +78,7 @@ def get_webpage(companies):
     ) 
     search_icon.click() 
 
-    for company in companies[76:]: 
+    for company in companies: 
         try: 
             search = WebDriverWait(driver, 60).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='search']"))
